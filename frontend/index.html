@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Language Recognition</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Sign Language Recognition System</h1>
+
+    <!-- Video Section -->
+    <div class="video-container">
+        <video id="video" autoplay playsinline></video>
+        <p id="placeholder">Camera not started</p>
+    </div>
+
+    <!-- Buttons -->
+    <div class="controls">
+        <button id="startBtn">Start Camera</button>
+        <button id="captureBtn" disabled>Capture & Predict</button>
+    </div>
+
+    <!-- Output -->
+    <div class="output">
+        <h2>Detected Sign:</h2>
+        <p id="gesture" class="highlight">--</p>
+
+        <h3>Confidence:</h3>
+        <p id="confidence">--</p>
+
+        <h3>Explanation:</h3>
+        <p id="explanation">--</p>
+
+        <p id="status"></p>
+    </div>
+</div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
