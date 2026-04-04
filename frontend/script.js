@@ -8,6 +8,7 @@ const explanationText = document.getElementById("explanation");
 const statusText = document.getElementById("status");
 const placeholder = document.getElementById("placeholder");
 
+
 // Start Camera
 startBtn.onclick = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ video: true });
