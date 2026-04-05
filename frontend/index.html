@@ -3,43 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Language Recognition</title>
+    <title>SignBridge</title>
     <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+    <main class="page-shell">
+        <section class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">MultiModal and Explainable Sign Language Recognition</p>
+                <h1>SignBridge</h1>
+                <p class="subtitle">
+                    A browser-based prototype for real-time sign recognition using hand, face,
+                    and upper-body cues with human-readable explanations.
+                </p>
+            </div>
+            <div class="controls">
+                <button id="startBtn">Start Camera</button>
+                <button id="stopBtn" disabled>Stop Camera</button>
+                <button id="captureBtn" disabled>Predict Once</button>
+                <label class="toggle">
+                    <input type="checkbox" id="liveToggle">
+                    <span>Live Mode</span>
+                </label>
+            </div>
+        </section>
 
-<div class="container">
-    <h1>Sign Language Recognition System</h1>
+        <section class="dashboard">
+            <div class="video-panel card">
+                <div class="panel-head">
+                    <h2>Live Camera</h2>
+                    <p id="status" class="status">Camera not started</p>
+                </div>
+                <div class="video-container">
+                    <video id="video" autoplay playsinline></video>
+                    <p id="placeholder">Waiting for camera access</p>
+                </div>
+            </div>
 
-    <!-- Video Section -->
-    <div class="video-container">
-        <video id="video" autoplay playsinline></video>
-        <p id="placeholder">Camera not started</p>
-    </div>
+            <div class="results-panel card">
+                <div class="panel-head">
+                    <h2>Recognition Output</h2>
+                    <p class="mini-label">Readable output for assistive communication</p>
+                </div>
 
-    <!-- Buttons -->
-    <div class="controls">
-        <button id="startBtn">Start Camera</button>
-        <button id="captureBtn" disabled>Capture & Predict</button>
-    </div>
+                <div class="result-grid">
+                    <div class="result-block">
+                        <span class="label">Detected Sign</span>
+                        <p id="gesture" class="highlight">--</p>
+                    </div>
+                    <div class="result-block">
+                        <span class="label">Text Output</span>
+                        <p id="textOutput" class="text-output">--</p>
+                    </div>
+                    <div class="result-block">
+                        <span class="label">Confidence</span>
+                        <p id="confidence">--</p>
+                    </div>
+                </div>
 
-    <!-- Output -->
-    <div class="output">
-        <h2>Detected Sign:</h2>
-        <p id="gesture" class="highlight">--</p>
+                <div class="explanation-block">
+                    <span class="label">Explainable Reasoning</span>
+                    <p id="explanation">--</p>
+                </div>
 
-        <h3>Confidence:</h3>
-        <p id="confidence">--</p>
+                <div class="modalities-grid">
+                    <article class="modality-card">
+                        <span class="label">Hand Analysis</span>
+                        <p id="handInfo">--</p>
+                    </article>
+                    <article class="modality-card">
+                        <span class="label">Face Analysis</span>
+                        <p id="faceInfo">--</p>
+                    </article>
+                    <article class="modality-card">
+                        <span class="label">Body Analysis</span>
+                        <p id="poseInfo">--</p>
+                    </article>
+                </div>
 
-        <h3>Explanation:</h3>
-        <p id="explanation">--</p>
+                <div class="history-block">
+                    <div class="panel-head">
+                        <h3>Recent Predictions</h3>
+                    </div>
+                    <ul id="historyList"></ul>
+                </div>
+            </div>
+        </section>
+    </main>
 
-        <p id="status"></p>
-    </div>
-</div>
-
-<script src="script.js"></script>
-
+    <script src="script.js"></script>
 </body>
 </html>
