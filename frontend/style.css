@@ -1,6 +1,5 @@
 :root {
     --bg: #07111f;
-    --bg-soft: #10213b;
     --card: rgba(9, 20, 35, 0.82);
     --line: rgba(171, 203, 255, 0.18);
     --text: #f4f7fb;
@@ -8,6 +7,41 @@
     --accent: #5bd0ff;
     --accent-strong: #1fa4ff;
     --success: #66e3a4;
+    --body-gradient:
+        radial-gradient(circle at top left, rgba(91, 208, 255, 0.22), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(102, 227, 164, 0.18), transparent 24%),
+        linear-gradient(160deg, var(--bg), #0c1730 48%, #08101d);
+    --subtitle: #d3def0;
+    --surface: rgba(255, 255, 255, 0.04);
+    --surface-strong: linear-gradient(145deg, rgba(8, 18, 31, 0.95), rgba(22, 37, 63, 0.9));
+    --shadow: 0 30px 60px rgba(3, 8, 16, 0.35);
+    --button-shadow: 0 10px 25px rgba(31, 164, 255, 0.22);
+    --list-text: #dbe6f5;
+    --content-text: #d7e3f5;
+    --placeholder-text: #d9e4f4;
+}
+
+body.light-mode {
+    --bg: #fff5e8;
+    --card: rgba(255, 255, 255, 0.84);
+    --line: rgba(173, 106, 35, 0.16);
+    --text: #402314;
+    --muted: #9b6a4a;
+    --accent: #d97706;
+    --accent-strong: #f6ad55;
+    --success: #2f855a;
+    --body-gradient:
+        radial-gradient(circle at top left, rgba(251, 191, 36, 0.18), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(251, 146, 60, 0.16), transparent 24%),
+        linear-gradient(160deg, #fffaf3, #fdf0df 48%, #f7e3ca);
+    --subtitle: #7a5036;
+    --surface: rgba(120, 70, 28, 0.05);
+    --surface-strong: linear-gradient(145deg, rgba(255, 251, 245, 0.98), rgba(250, 236, 214, 0.94));
+    --shadow: 0 24px 45px rgba(122, 80, 54, 0.12);
+    --button-shadow: 0 10px 25px rgba(217, 119, 6, 0.18);
+    --list-text: #5e3a24;
+    --content-text: #6b442a;
+    --placeholder-text: #9a6d4f;
 }
 
 * {
@@ -18,11 +52,9 @@ body {
     margin: 0;
     min-height: 100vh;
     font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-    background:
-        radial-gradient(circle at top left, rgba(91, 208, 255, 0.22), transparent 28%),
-        radial-gradient(circle at bottom right, rgba(102, 227, 164, 0.18), transparent 24%),
-        linear-gradient(160deg, var(--bg), #0c1730 48%, #08101d);
+    background: var(--body-gradient);
     color: var(--text);
+    transition: background 0.35s ease, color 0.25s ease;
 }
 
 .page-shell {
@@ -68,7 +100,7 @@ h1 {
 .subtitle {
     max-width: 60ch;
     margin-top: 14px;
-    color: #d3def0;
+    color: var(--subtitle);
     line-height: 1.6;
 }
 
@@ -79,7 +111,7 @@ h1 {
     justify-content: flex-start;
 }
 
-button {
+.control-button {
     border: 0;
     border-radius: 999px;
     padding: 12px 18px;
@@ -88,13 +120,15 @@ button {
     cursor: pointer;
     color: var(--text);
     background: linear-gradient(135deg, var(--accent-strong), var(--accent));
-    box-shadow: 0 10px 25px rgba(31, 164, 255, 0.22);
+    box-shadow: var(--button-shadow);
+    user-select: none;
 }
 
-button:disabled {
+.control-button.is-disabled {
     cursor: not-allowed;
     opacity: 0.45;
     box-shadow: none;
+    pointer-events: none;
 }
 
 .toggle {
@@ -103,8 +137,12 @@ button:disabled {
     gap: 10px;
     padding: 12px 16px;
     border-radius: 999px;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--surface);
     border: 1px solid var(--line);
+}
+
+.theme-toggle {
+    min-width: 132px;
 }
 
 .dashboard {
@@ -116,7 +154,7 @@ button:disabled {
     border: 1px solid var(--line);
     border-radius: 24px;
     padding: 20px;
-    box-shadow: 0 30px 60px rgba(3, 8, 16, 0.35);
+    box-shadow: var(--shadow);
     backdrop-filter: blur(14px);
 }
 
@@ -138,7 +176,7 @@ button:disabled {
     border-radius: 20px;
     overflow: hidden;
     border: 1px solid var(--line);
-    background: linear-gradient(145deg, rgba(8, 18, 31, 0.95), rgba(22, 37, 63, 0.9));
+    background: var(--surface-strong);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -152,7 +190,7 @@ video {
 
 #placeholder {
     position: absolute;
-    color: #d9e4f4;
+    color: var(--placeholder-text);
     text-align: center;
     padding: 0 24px;
 }
@@ -176,7 +214,7 @@ video {
 .modality-card,
 .history-block,
 .explanation-block {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 18px;
     padding: 16px;
@@ -197,7 +235,7 @@ video {
 .modality-card p {
     margin-top: 10px;
     line-height: 1.6;
-    color: #d7e3f5;
+    color: var(--content-text);
 }
 
 .modalities-grid {
@@ -215,8 +253,8 @@ video {
 .history-block li {
     padding: 10px 12px;
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.05);
-    color: #dbe6f5;
+    background: var(--surface);
+    color: var(--list-text);
 }
 
 @media (max-width: 980px) {

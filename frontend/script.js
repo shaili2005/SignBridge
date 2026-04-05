@@ -3,6 +3,8 @@ const startBtn = document.getElementById("startBtn");
 const stopBtn = document.getElementById("stopBtn");
 const captureBtn = document.getElementById("captureBtn");
 const liveToggle = document.getElementById("liveToggle");
+const themeToggle = document.getElementById("themeToggle");
+const themeLabel = document.getElementById("themeLabel");
 
 const gestureText = document.getElementById("gesture");
 const textOutputText = document.getElementById("textOutput");
@@ -15,34 +17,33 @@ const faceInfo = document.getElementById("faceInfo");
 const poseInfo = document.getElementById("poseInfo");
 const historyList = document.getElementById("historyList");
 
-const API_BASE = "http://127.0.0.1:8000";
+const API_BASE = "";
+const THEME_KEY = "signbridge-theme";
 let stream = null;
 let liveTimer = null;
 let isPredicting = false;
+let previewMonitor = null;
 const predictionHistory = [];
+statusText.innerText = "Camera not started";
+applyTheme(localStorage.getItem(THEME_KEY) || "dark");
 
-startBtn.onclick = async () => {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        video.srcObject = stream;
-        await video.play();
+window.addEventListener("submit", (event) => {
+    event.preventDefault();
+});
 
-        placeholder.style.display = "none";
-        captureBtn.disabled = false;
-        stopBtn.disabled = false;
-        startBtn.disabled = true;
-        statusText.innerText = "Camera live. Ready for prediction.";
+startBtn.addEventListener("mousedown", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
 
-        if (liveToggle.checked) {
-            startLiveMode();
-        }
-    } catch (error) {
-        statusText.innerText = "Camera access was denied or unavailable.";
-    }
-};
+    await startCamera(false);
+});
 
-stopBtn.onclick = () => {
+stopBtn.addEventListener("mousedown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     stopLiveMode();
+    stopPreviewMonitor();
 
     if (stream) {
         stream.getTracks().forEach((track) => track.stop());
@@ -51,13 +52,15 @@ stopBtn.onclick = () => {
 
     video.srcObject = null;
     placeholder.style.display = "block";
-    captureBtn.disabled = true;
-    stopBtn.disabled = true;
-    startBtn.disabled = false;
+    setControlEnabled(captureBtn, false);
+    setControlEnabled(stopBtn, false);
+    setControlEnabled(startBtn, true);
     statusText.innerText = "Camera stopped.";
-};
+});
 
-liveToggle.onchange = () => {
+liveToggle.addEventListener("change", (event) => {
+    event.stopPropagation();
+
     if (!stream) {
         statusText.innerText = "Start the camera before enabling live mode.";
         liveToggle.checked = false;
@@ -70,9 +73,18 @@ liveToggle.onchange = () => {
         stopLiveMode();
         statusText.innerText = "Live mode paused. Manual prediction is still available.";
     }
-};
+});
 
-captureBtn.onclick = async () => {
+themeToggle.addEventListener("change", () => {
+    const theme = themeToggle.checked ? "light" : "dark";
+    applyTheme(theme);
+    localStorage.setItem(THEME_KEY, theme);
+});
+
+captureBtn.addEventListener("mousedown", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
     if (liveToggle.checked) {
         stopLiveMode();
         liveToggle.checked = false;
@@ -80,7 +92,7 @@ captureBtn.onclick = async () => {
     }
 
     await predictFrame();
-};
+});
 
 function startLiveMode() {
     stopLiveMode();
@@ -104,14 +116,7 @@ async function predictFrame() {
 
     isPredicting = true;
     statusText.innerText = "Processing frame...";
-
-    if (video.paused || video.ended) {
-        try {
-            await video.play();
-        } catch (error) {
-            statusText.innerText = "Camera preview paused. Restart the camera once.";
-        }
-    }
+    await ensureVideoPreview();
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -147,37 +152,57 @@ async function predictFrame() {
         } catch (error) {
             statusText.innerText = "Backend error. Make sure FastAPI is running on port 8000.";
         } finally {
-            if (stream && (video.paused || video.ended)) {
-                try {
-                    await video.play();
-                } catch (error) {
-                    statusText.innerText = "Prediction finished, but the preview needs to be restarted.";
-                }
-            }
+            await ensureVideoPreview();
             isPredicting = false;
         }
     }, "image/jpeg");
 }
 
 video.addEventListener("pause", async () => {
-    if (stream) {
+    await ensureVideoPreview();
+});
+
+video.addEventListener("ended", async () => {
+    await ensureVideoPreview();
+});
+
+async function ensureVideoPreview() {
+    if (!stream) {
+        return;
+    }
+
+    const track = stream.getVideoTracks()[0];
+    if (!track || track.readyState !== "live") {
+        statusText.innerText = "Camera track stopped. Restart the camera.";
+        return;
+    }
+
+    if (video.srcObject !== stream) {
+        video.srcObject = stream;
+    }
+
+    if (video.paused || video.ended || video.readyState < 2) {
         try {
             await video.play();
         } catch (error) {
             statusText.innerText = "Camera preview paused unexpectedly.";
         }
     }
-});
+}
 
-video.addEventListener("ended", async () => {
-    if (stream) {
-        try {
-            await video.play();
-        } catch (error) {
-            statusText.innerText = "Camera stream ended unexpectedly.";
-        }
+function startPreviewMonitor() {
+    stopPreviewMonitor();
+    previewMonitor = window.setInterval(() => {
+        ensureVideoPreview();
+    }, 800);
+}
+
+function stopPreviewMonitor() {
+    if (previewMonitor) {
+        window.clearInterval(previewMonitor);
+        previewMonitor = null;
     }
-});
+}
 
 function renderModalities(modalities = {}) {
     const hand = modalities.hand || {};
@@ -220,4 +245,39 @@ function addHistoryEntry(data) {
 
 function formatBool(value) {
     return value ? "Yes" : "No";
+}
+
+function setControlEnabled(element, enabled) {
+    element.classList.toggle("is-disabled", !enabled);
+    element.setAttribute("aria-disabled", enabled ? "false" : "true");
+    element.tabIndex = enabled ? 0 : -1;
+}
+
+async function startCamera(isRestore) {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.muted = true;
+        await ensureVideoPreview();
+        startPreviewMonitor();
+
+        placeholder.style.display = "none";
+        setControlEnabled(captureBtn, true);
+        setControlEnabled(stopBtn, true);
+        setControlEnabled(startBtn, false);
+        statusText.innerText = "Camera live. Ready for prediction.";
+
+        if (liveToggle.checked) {
+            startLiveMode();
+        }
+    } catch (error) {
+        statusText.innerText = "Camera access was denied or unavailable.";
+    }
+}
+
+function applyTheme(theme) {
+    const isLight = theme === "light";
+    document.body.classList.toggle("light-mode", isLight);
+    themeToggle.checked = isLight;
+    themeLabel.innerText = isLight ? "Dark Mode" : "Light Mode";
 }

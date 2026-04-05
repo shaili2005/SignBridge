@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SignBridge</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
     <main class="page-shell">
@@ -18,12 +18,16 @@
                 </p>
             </div>
             <div class="controls">
-                <button id="startBtn" type="button">Start Camera</button>
-                <button id="stopBtn" type="button" disabled>Stop Camera</button>
-                <button id="captureBtn" type="button" disabled>Predict Once</button>
+                <div id="startBtn" class="control-button" role="button" tabindex="0" aria-label="Start Camera">Start Camera</div>
+                <div id="stopBtn" class="control-button is-disabled" role="button" tabindex="-1" aria-label="Stop Camera" aria-disabled="true">Stop Camera</div>
+                <div id="captureBtn" class="control-button is-disabled" role="button" tabindex="-1" aria-label="Predict Once" aria-disabled="true">Predict Once</div>
                 <label class="toggle">
                     <input type="checkbox" id="liveToggle">
                     <span>Live Mode</span>
+                </label>
+                <label class="toggle theme-toggle">
+                    <input type="checkbox" id="themeToggle">
+                    <span id="themeLabel">Light Mode</span>
                 </label>
             </div>
         </section>
@@ -35,7 +39,7 @@
                     <p id="status" class="status">Camera not started</p>
                 </div>
                 <div class="video-container">
-                    <video id="video" autoplay playsinline></video>
+                    <video id="video" autoplay muted playsinline></video>
                     <p id="placeholder">Waiting for camera access</p>
                 </div>
             </div>
@@ -91,6 +95,6 @@
         </section>
     </main>
 
-    <script src="script.js"></script>
+    <script src="/script.js"></script>
 </body>
 </html>
