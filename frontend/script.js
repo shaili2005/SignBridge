@@ -25,6 +25,7 @@ startBtn.onclick = async () => {
     try {
         stream = await navigator.mediaDevices.getUserMedia({ video: true });
         video.srcObject = stream;
+        await video.play();
 
         placeholder.style.display = "none";
         captureBtn.disabled = false;
@@ -72,6 +73,12 @@ liveToggle.onchange = () => {
 };
 
 captureBtn.onclick = async () => {
+    if (liveToggle.checked) {
+        stopLiveMode();
+        liveToggle.checked = false;
+        statusText.innerText = "Live mode paused for manual prediction.";
+    }
+
     await predictFrame();
 };
 
@@ -97,6 +104,14 @@ async function predictFrame() {
 
     isPredicting = true;
     statusText.innerText = "Processing frame...";
+
+    if (video.paused || video.ended) {
+        try {
+            await video.play();
+        } catch (error) {
+            statusText.innerText = "Camera preview paused. Restart the camera once.";
+        }
+    }
 
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
@@ -132,10 +147,37 @@ async function predictFrame() {
         } catch (error) {
             statusText.innerText = "Backend error. Make sure FastAPI is running on port 8000.";
         } finally {
+            if (stream && (video.paused || video.ended)) {
+                try {
+                    await video.play();
+                } catch (error) {
+                    statusText.innerText = "Prediction finished, but the preview needs to be restarted.";
+                }
+            }
             isPredicting = false;
         }
     }, "image/jpeg");
 }
+
+video.addEventListener("pause", async () => {
+    if (stream) {
+        try {
+            await video.play();
+        } catch (error) {
+            statusText.innerText = "Camera preview paused unexpectedly.";
+        }
+    }
+});
+
+video.addEventListener("ended", async () => {
+    if (stream) {
+        try {
+            await video.play();
+        } catch (error) {
+            statusText.innerText = "Camera stream ended unexpectedly.";
+        }
+    }
+});
 
 function renderModalities(modalities = {}) {
     const hand = modalities.hand || {};
