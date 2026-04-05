@@ -1,5 +1,9 @@
+from pathlib import Path
+
 from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import cv2
 import numpy as np
 
@@ -8,6 +12,8 @@ from storage import fetch_recent_predictions, initialize_database, save_predicti
 
 app = FastAPI(title="SignBridge API")
 recognizer = SignRecognizer()
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
 
 app.add_middleware(
     CORSMiddleware,
@@ -18,14 +24,27 @@ app.add_middleware(
 )
 
 initialize_database()
+app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
 @app.get("/")
 def home():
-    return {
-        "message": "SignBridge backend is running.",
-        "supported_signs": ["HELLO", "YES", "NO", "OK", "PEACE", "THUMBS_UP"],
-    }
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/app")
+def app_page():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/style.css")
+def frontend_styles():
+    return FileResponse(FRONTEND_DIR / "style.css")
+
+
+@app.get("/script.js")
+def frontend_script():
+    return FileResponse(FRONTEND_DIR / "script.js")
 
 
 @app.get("/health")
