@@ -49,7 +49,20 @@ def frontend_script():
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "supported_signs": [
+            "HELLO",
+            "PLEASE",
+            "YES",
+            "NO",
+            "OK",
+            "PEACE",
+            "THUMBS_UP",
+            "THUMBS_DOWN",
+            "I_LOVE_YOU",
+        ],
+    }
 
 
 @app.post("/predict")

@@ -81,9 +81,14 @@ class SignRecognizer:
             "open_palm": False,
             "closed_fist": False,
             "pinch": False,
+            "ok_sign": False,
             "thumbs_up": False,
+            "thumbs_down": False,
             "pointing_up": False,
             "peace": False,
+            "i_love_you": False,
+            "wrist_y": None,
+            "thumb_down_candidate": False,
         }
 
         if not hand_result.multi_hand_landmarks:
@@ -93,7 +98,10 @@ class SignRecognizer:
         wrist = hand_landmarks[0]
         thumb_tip = hand_landmarks[4]
         thumb_ip = hand_landmarks[3]
+        thumb_mcp = hand_landmarks[2]
         index_tip = hand_landmarks[8]
+        index_dip = hand_landmarks[7]
+        index_pip = hand_landmarks[6]
         middle_tip = hand_landmarks[12]
         ring_tip = hand_landmarks[16]
         pinky_tip = hand_landmarks[20]
@@ -103,15 +111,49 @@ class SignRecognizer:
         pinky_base = hand_landmarks[17]
 
         ref_dist = abs(wrist.y - middle_base.y) + 1e-6
+        thumb_vertical = (thumb_mcp.y - thumb_tip.y) / ref_dist
+        thumb_horizontal = abs(thumb_tip.x - thumb_ip.x)
+        index_vertical = (index_base.y - index_tip.y) / ref_dist
+        thumb_extension = self._distance(thumb_tip, thumb_mcp) / ref_dist
+        index_extended = (
+            index_vertical > 0.45
+            and index_tip.y < index_dip.y
+            and index_dip.y < index_pip.y
+        )
+        thumb_down_candidate = (
+            thumb_tip.y > wrist.y + (0.08 * ref_dist)
+            and thumb_tip.y > thumb_mcp.y + (0.05 * ref_dist)
+            and thumb_tip.y > max(index_tip.y, middle_tip.y, ring_tip.y, pinky_tip.y) + (0.03 * ref_dist)
+            and thumb_extension > 0.75
+            and middle_tip.y > middle_base.y - (0.05 * ref_dist)
+            and ring_tip.y > ring_base.y - (0.05 * ref_dist)
+            and pinky_tip.y > pinky_base.y - (0.05 * ref_dist)
+        )
         finger_states = {
-            "thumb": abs(thumb_tip.x - thumb_ip.x) > 0.045,
-            "index": (index_base.y - index_tip.y) / ref_dist > 0.4,
+            "thumb": thumb_horizontal > 0.045 or thumb_vertical > 0.55,
+            "index": index_extended,
             "middle": (middle_base.y - middle_tip.y) / ref_dist > 0.4,
             "ring": (ring_base.y - ring_tip.y) / ref_dist > 0.35,
             "pinky": (pinky_base.y - pinky_tip.y) / ref_dist > 0.3,
         }
 
-        pinch = self._distance(thumb_tip, index_tip) < 0.08
+        pinch = (
+            self._distance(thumb_tip, index_tip) < 0.12
+            and self._distance(thumb_tip, index_dip) < 0.18
+            and index_tip.y > index_base.y - (0.1 * ref_dist)
+            and finger_states["middle"]
+            and finger_states["ring"]
+            and finger_states["pinky"]
+        )
+        ok_sign = (
+            (
+                self._distance(thumb_tip, index_tip) < 0.16
+                or self._distance(thumb_tip, index_dip) < 0.2
+            )
+            and finger_states["middle"]
+            and finger_states["ring"]
+            and finger_states["pinky"]
+        )
         open_palm = all(
             finger_states[finger]
             for finger in ("index", "middle", "ring", "pinky")
@@ -119,26 +161,40 @@ class SignRecognizer:
         closed_fist = not any(
             finger_states[finger]
             for finger in ("index", "middle", "ring", "pinky")
-        )
+        ) and not finger_states["thumb"]
         thumbs_up = (
             finger_states["thumb"]
             and not finger_states["index"]
             and not finger_states["middle"]
             and not finger_states["ring"]
             and not finger_states["pinky"]
+            and thumb_vertical > 0.55
             and thumb_tip.y < wrist.y
+        )
+        thumbs_down = (
+            thumb_down_candidate
+            and (thumb_tip.y - thumb_mcp.y) / ref_dist > 0.1
         )
         pointing_up = (
             finger_states["index"]
             and not finger_states["middle"]
             and not finger_states["ring"]
             and not finger_states["pinky"]
+            and index_tip.y < wrist.y
+            and not thumb_down_candidate
         )
         peace = (
             finger_states["index"]
             and finger_states["middle"]
             and not finger_states["ring"]
             and not finger_states["pinky"]
+        )
+        i_love_you = (
+            finger_states["thumb"]
+            and finger_states["index"]
+            and not finger_states["middle"]
+            and not finger_states["ring"]
+            and finger_states["pinky"]
         )
 
         return {
@@ -147,9 +203,14 @@ class SignRecognizer:
             "open_palm": open_palm,
             "closed_fist": closed_fist,
             "pinch": pinch,
+            "ok_sign": ok_sign,
             "thumbs_up": thumbs_up,
+            "thumbs_down": thumbs_down,
             "pointing_up": pointing_up,
             "peace": peace,
+            "i_love_you": i_love_you,
+            "wrist_y": wrist.y,
+            "thumb_down_candidate": thumb_down_candidate,
         }
 
     def _extract_face_features(self, face_result) -> dict[str, Any]:
@@ -181,6 +242,7 @@ class SignRecognizer:
             "shoulders_visible": False,
             "upright": False,
             "hand_above_shoulder": False,
+            "shoulder_mid_y": None,
         }
 
         if not pose_result.pose_landmarks:
@@ -209,6 +271,7 @@ class SignRecognizer:
             "shoulders_visible": shoulders_visible,
             "upright": upright and nose.visibility > 0.5,
             "hand_above_shoulder": hand_above_shoulder,
+            "shoulder_mid_y": shoulder_mid_y,
         }
 
     def _classify(
@@ -250,6 +313,19 @@ class SignRecognizer:
         else:
             explanation_parts.append("Body cues: no reliable upper-body landmarks detected.")
 
+        if (
+            hand_features["open_palm"]
+            and pose_features["detected"]
+            and not pose_features["hand_above_shoulder"]
+            and pose_features["shoulder_mid_y"] is not None
+            and hand_features["wrist_y"] is not None
+            and hand_features["wrist_y"] > pose_features["shoulder_mid_y"] - 0.08
+        ):
+            explanation_parts.append(
+                "Fusion: open palm held below the shoulder line matches PLEASE."
+            )
+            return "PLEASE", 0.82, explanation_parts
+
         if hand_features["open_palm"]:
             confidence = 0.88
             if pose_features["hand_above_shoulder"]:
@@ -259,6 +335,28 @@ class SignRecognizer:
                 explanation_parts.append("Fusion: open palm pattern matches HELLO.")
             return "HELLO", confidence, explanation_parts
 
+        if hand_features["thumbs_down"]:
+            explanation_parts.append("Fusion: thumb is clearly directed downward below the other fingertips.")
+            return "THUMBS_DOWN", 0.9, explanation_parts
+
+        if hand_features["ok_sign"] or hand_features["pinch"]:
+            explanation_parts.append("Fusion: thumb and index form a circle while the other three fingers stay extended.")
+            return "OK", 0.87, explanation_parts
+
+        if hand_features["peace"]:
+            explanation_parts.append("Fusion: index and middle fingers raised match PEACE.")
+            return "PEACE", 0.85, explanation_parts
+
+        if hand_features["i_love_you"]:
+            explanation_parts.append(
+                "Fusion: thumb, index, and pinky raised together match I LOVE YOU."
+            )
+            return "I_LOVE_YOU", 0.88, explanation_parts
+
+        if hand_features["thumbs_up"]:
+            explanation_parts.append("Fusion: only thumb is extended upward.")
+            return "THUMBS_UP", 0.89, explanation_parts
+
         if hand_features["pointing_up"]:
             explanation_parts.append("Fusion: index finger raised while others are folded.")
             return "YES", 0.86, explanation_parts
@@ -266,18 +364,6 @@ class SignRecognizer:
         if hand_features["closed_fist"]:
             explanation_parts.append("Fusion: closed fist pattern matches NO.")
             return "NO", 0.84, explanation_parts
-
-        if hand_features["pinch"]:
-            explanation_parts.append("Fusion: thumb and index finger pinch matches OK.")
-            return "OK", 0.87, explanation_parts
-
-        if hand_features["peace"]:
-            explanation_parts.append("Fusion: index and middle fingers raised match PEACE.")
-            return "PEACE", 0.85, explanation_parts
-
-        if hand_features["thumbs_up"]:
-            explanation_parts.append("Fusion: only thumb is extended upward.")
-            return "THUMBS_UP", 0.89, explanation_parts
 
         explanation_parts.append("Fusion: gesture pattern is outside the current sign vocabulary.")
         return "UNSURE", 0.35, explanation_parts
@@ -290,6 +376,9 @@ class SignRecognizer:
             "OK": "Okay",
             "PEACE": "Peace",
             "THUMBS_UP": "Thumbs up",
+            "THUMBS_DOWN": "Thumbs down",
+            "PLEASE": "Please",
+            "I_LOVE_YOU": "I love you",
             "NO_SIGN": "No sign detected",
             "UNSURE": "Gesture not recognized",
         }
